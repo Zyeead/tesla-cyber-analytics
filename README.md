@@ -1,16 +1,33 @@
-# React + Vite
+# 🏎️ Tesla Cyber Analytics - Performance Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A high-performance, modern financial analytics dashboard built to visualize Tesla's stock performance and regression analysis. This project showcases a sleek "Cyberpunk" inspired UI with real-time style data visualization.
 
-Currently, two official plugins are available:
+🔗 **[Live Demo on Vercel](https://tesla-cyber-analytics.vercel.app/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **Financial Metrics:** Tracking key indicators like Beta (Sensitivity), Avg Monthly Return (19.31%), Asset Volatility, and Alpha (Edge).
+* **Interactive Charts:** Regression analysis and performance trajectory tracking.
+* **Modern UI:** Dark-themed dashboard with high-contrast red accents for a premium tech feel.
+* **Responsive Design:** Fully optimized for different screen sizes using modern CSS techniques.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Tech Stack
+
+* **Frontend:** [React](https://reactjs.org/).
+* **Build Tool:** [Vite](https://vitejs.dev/) for ultra-fast development and bundling.
+* **Version Control:** Git & GitHub.
+* **Deployment:** [Vercel](https://vercel.com/).
+
+---
+
+## 📦 Installation & Setup
+
+To run this project locally, follow these steps:
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/Zyeead/tesla-cyber-analytics.git](https://github.com/Zyeead/tesla-cyber-analytics.git)
