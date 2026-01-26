@@ -12,4 +12,5 @@ To run this project locally, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Zyeead/tesla-cyber-analytics.git](https://github.com/Zyeead/tesla-cyber-analytics.git)
+   git clone https://github.com/Zyeead/tesla-cyber-analytics.git
+   ```
