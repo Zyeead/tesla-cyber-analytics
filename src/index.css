@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+body {
+  /* خلفية تدرج رمادي معدني داكن بدلاً من الفضاء */
+  background: radial-gradient(circle at top center, #334155, #020617 80%);
+  margin: 0;
+  overflow-x: hidden;
+  color: #f8fafc; /* نص أبيض فاتح */
+}
+
+/* تمت إزالة أكواد النجوم (Stars) */
+
+.glass {
+  /* زجاج مدخن داكن مع حدود حمراء خفيفة */
+  background: rgba(15, 23, 42, 0.7); /* لون أغمق */
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(220, 38, 38, 0.3); /* حدود حمراء خافتة */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
