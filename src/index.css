@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 body {
-  /* خلفية تدرج رمادي معدني داكن بدلاً من الفضاء */
-  background: radial-gradient(circle at top center, #334155, #020617 80%);
+  /* تدرج من الأسود العميق إلى الرمادي القاتم جداً */
+  background: radial-gradient(circle at top center, #0f172a 0%, #000000 100%);
   margin: 0;
   overflow-x: hidden;
-  color: #f8fafc; /* نص أبيض فاتح */
+  color: #f8fafc;
+  min-height: 100-vh;
 }
 
 /* تمت إزالة أكواد النجوم (Stars) */
