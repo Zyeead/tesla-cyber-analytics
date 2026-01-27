@@ -10,10 +10,25 @@ body {
 
 /* تمت إزالة أكواد النجوم (Stars) */
 
+/* استبدل كود .glass القديم بهذا في ملف index.css */
 .glass {
-  /* زجاج مدخن داكن مع حدود حمراء خفيفة */
-  background: rgba(15, 23, 42, 0.7); /* لون أغمق */
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(220, 38, 38, 0.3); /* حدود حمراء خافتة */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  /* تأثير زجاجي شفاف مع الحفاظ على الهوية الداكنة */
+  background: rgba(15, 23, 42, 0.3); /* تقليل التعتيم لزيادة الشفافية */
+  backdrop-filter: blur(20px) saturate(180%); /* زيادة الغبش وتشبع الألوان خلف الزجاج */
+  -webkit-backdrop-filter: blur(20px) saturate(180%); 
+  
+  /* حدود حمراء "Cyber" متوهجة خفيفة */
+  border: 1px solid rgba(220, 38, 38, 0.4); 
+  
+  /* ظل يعطي إيحاء بالعمق (Z-axis) */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  
+  /* انتقال ناعم عند مرور الفأرة */
+  transition: all 0.3s ease;
+}
+
+/* حركة اختيارية: تجعل الزجاج يلمع عند مرور الفأرة */
+.glass:hover {
+  background: rgba(220, 38, 38, 0.05); /* لمحة حمراء خفيفة */
+  border: 1px solid rgba(220, 38, 38, 0.8); /* زيادة توهج الحدود */
 }
