@@ -1,12 +1,9 @@
 @import "tailwindcss";
 
 body {
-  /* تدرج من الأسود العميق إلى الرمادي القاتم جداً */
-  background: radial-gradient(circle at top center, #0f172a 0%, #000000 100%);
+  background: red !important;
   margin: 0;
-  overflow-x: hidden;
-  color: #f8fafc;
-  min-height: 100-vh;
+  color: white;
 }
 
 /* تمت إزالة أكواد النجوم (Stars) */
