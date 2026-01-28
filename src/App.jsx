@@ -8,6 +8,7 @@ import { SiTesla } from 'react-icons/si';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+// مصفوفة البيانات الكاملة (60 شهراً) لضمان دقة تحليل البيتا
 const rawData = [
     { "date": "2020-01", "stockReturn": 0.532556, "indexReturn": -0.005902, "stockPrice": 43.37 },
     { "date": "2020-02", "stockReturn": -0.008461, "indexReturn": -0.086981, "stockPrice": 44.53 },
@@ -74,6 +75,7 @@ const rawData = [
 const App = () => {
     const dashboardRef = useRef();
 
+    // حساب الإحصائيات (البيتا والعودة)
     const stats = useMemo(() => {
         const n = rawData.length;
         const sumX = rawData.reduce((acc, val) => acc + val.indexReturn, 0);
@@ -95,56 +97,55 @@ const App = () => {
         };
     }, []);
 
-    // دالة التصدير المطورة جداً لمنع الـ iframe من التعليق
-const exportToPDF = async (e) => {
-    const btn = e.currentTarget;
-    const element = dashboardRef.current;
-    if (!element) return;
+    // دالة التصدير النهائية - مُحصنة ضد أخطاء oklab و Blur
+    const exportToPDF = async (e) => {
+        const btn = e.currentTarget;
+        const element = dashboardRef.current;
+        if (!element) return;
 
-    try {
-        btn.innerText = "PROCESSING...";
-        btn.disabled = true;
+        try {
+            btn.innerText = "PREPARING...";
+            btn.disabled = true;
 
-        const canvas = await html2canvas(element, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#000000',
-            // حل مشكلة الألوان (oklab)
-            onclone: (clonedDoc) => {
-                const allElements = clonedDoc.getElementsByTagName("*");
-                for (let el of allElements) {
-                    // تحويل أي لون غريب إلى أسود أو شفاف يدوياً لمنع الانهيار
-                    const style = window.getComputedStyle(el);
-                    if (style.color.includes('oklab')) el.style.color = '#ffffff';
-                    if (style.backgroundColor.includes('oklab')) el.style.backgroundColor = 'transparent';
-                    
-                    // حل مشكلة حجم الرسوم البيانية
-                    if (el.classList.contains('glass')) {
-                        el.style.backdropFilter = 'none';
-                        el.style.filter = 'none';
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#000000',
+                onclone: (clonedDoc) => {
+                    // 1. تنظيف ألوان oklab التي لا يفهمها البرنامج
+                    const allNodes = clonedDoc.getElementsByTagName('*');
+                    for (let node of allNodes) {
+                        const style = window.getComputedStyle(node);
+                        if (style.color.includes('oklab')) node.style.color = '#ffffff';
+                        if (style.backgroundColor.includes('oklab')) node.style.backgroundColor = 'rgba(0,0,0,0)';
+                        
+                        // 2. إزالة تأثير الزجاج Blur لتسريع العملية ومنع التعليق
+                        if (node.classList.contains('glass')) {
+                            node.style.backdropFilter = 'none';
+                            node.style.webkitBackdropFilter = 'none';
+                            node.style.background = 'rgba(15, 23, 42, 0.95)';
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Tesla_Cyber_Report.pdf`);
-    } catch (err) {
-        console.error("PDF Final Error:", err);
-        alert("تنبيه: المتصفح يواجه صعوبة في معالجة الألوان الحديثة، جرب متصفحاً آخر أو حدث الصفحة.");
-    } finally {
-        btn.innerText = "EXPORT REPORT";
-        btn.disabled = false;
-        // تنظيف المخلفات البرمجية
-        const containers = document.querySelectorAll('.html2canvas-container');
-        containers.forEach(c => c.remove());
-    }
-};
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Tesla_Cyber_Report_${new Date().toLocaleDateString()}.pdf`);
+        } catch (err) {
+            console.error("PDF Export Crash:", err);
+            alert("Export failed due to browser color limitations. Please try Chrome or Edge.");
+        } finally {
+            btn.innerText = "EXPORT REPORT";
+            btn.disabled = false;
+            // تنظيف الحاويات العالقة لضمان عدم تراكم الـ iframes
+            document.querySelectorAll('.html2canvas-container').forEach(el => el.remove());
+        }
+    };
 
     const scatterData = rawData.map(d => ({
         x: d.indexReturn * 100,
@@ -153,6 +154,7 @@ const exportToPDF = async (e) => {
     }));
 
     return (
+        /* الخلفية السوداء السيبرانية المباشرة */
         <div ref={dashboardRef} className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
              style={{ background: 'radial-gradient(circle at top center, #0f172a 0%, #000000 100%)' }}>
             
@@ -166,7 +168,7 @@ const exportToPDF = async (e) => {
                             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">
                                 Tesla <span className="text-red-500">Cyber</span> Analytics
                             </h1>
-                            <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70">TSLA PERFORMANCE DASHBOARD</p>
+                            <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70 uppercase">Beta Matrix v2.0</p>
                         </div>
                     </div>
                     <button 
@@ -198,19 +200,16 @@ const exportToPDF = async (e) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                     <div className="glass p-8 rounded-[2.5rem]">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest mb-10 flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-red-600 rounded-full"></span> Regression Analysis
+                            <span className="w-1.5 h-6 bg-red-600 rounded-full"></span> Regression Model
                         </h3>
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.3} />
                                     <XAxis type="number" dataKey="x" name="Market" unit="%" tick={{fill: '#94a3b8', fontSize: 10}} axisLine={{stroke: '#475569'}} />
                                     <YAxis type="number" dataKey="y" name="TSLA" unit="%" tick={{fill: '#94a3b8', fontSize: 10}} axisLine={{stroke: '#475569'}} />
-                                    <Tooltip 
-                                        contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Scatter name="Returns" data={scatterData} fill="#ef4444" fillOpacity={0.7} />
+                                    <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px', color: '#fff'}} />
+                                    <Scatter name="Returns" data={scatterData} fill="#ef4444" fillOpacity={0.6} />
                                     <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
                                     <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
                                 </ScatterChart>
@@ -220,18 +219,15 @@ const exportToPDF = async (e) => {
 
                     <div className="glass p-8 rounded-[2.5rem]">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest mb-10 flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-slate-500 rounded-full"></span> Performance Trajectory
+                            <span className="w-1.5 h-6 bg-slate-500 rounded-full"></span> Return Volatility
                         </h3>
                         <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={rawData.slice(-12)}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.3} />
                                     <XAxis dataKey="date" tick={{fill: '#94a3b8', fontSize: 10}} axisLine={{stroke: '#475569'}} />
                                     <YAxis unit="%" tickFormatter={(v) => (v * 100).toFixed(0)} tick={{fill: '#94a3b8', fontSize: 10}} axisLine={{stroke: '#475569'}} />
-                                    <Tooltip 
-                                        contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
+                                    <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}} />
                                     <Bar name="TSLA Return" dataKey="stockReturn" fill="#dc2626" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
                                     <Line name="S&P 500" type="monotone" dataKey="indexReturn" stroke="#94a3b8" strokeWidth={3} dot={{r: 4}} />
                                 </ComposedChart>
@@ -242,14 +238,14 @@ const exportToPDF = async (e) => {
 
                 <div className="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-10">
                     <div className="px-10 py-6 bg-red-900/10 border-b border-slate-800 flex justify-between items-center">
-                        <h3 className="text-lg font-black text-white uppercase tracking-widest">Historical Data Ledger</h3>
+                        <h3 className="text-lg font-black text-white uppercase tracking-widest">TSLA Historical Ledger</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="text-slate-400 text-[10px] uppercase tracking-[0.3em] border-b border-slate-800/50">
                                     <th className="px-10 py-6">Date</th>
-                                    <th className="px-10 py-6">TSLA Price ($)</th>
+                                    <th className="px-10 py-6">Price ($)</th>
                                     <th className="px-10 py-6 text-right">TSLA Return</th>
                                     <th className="px-10 py-6 text-right">Market Return</th>
                                 </tr>
@@ -259,9 +255,7 @@ const exportToPDF = async (e) => {
                                     <tr key={idx} className="hover:bg-red-500/10 transition-colors">
                                         <td className="px-10 py-5 text-sm font-bold text-slate-200">{row.date}</td>
                                         <td className="px-10 py-5 text-sm text-slate-400 font-mono">${row.stockPrice.toFixed(2)}</td>
-                                        <td className={`px-10 py-5 text-sm font-black text-right ${
-                                            row.stockReturn >= 0 ? 'text-emerald-400' : 'text-red-500'
-                                        }`}>
+                                        <td className={`px-10 py-5 text-sm font-black text-right ${row.stockReturn >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
                                             {(row.stockReturn * 100).toFixed(2)}%
                                         </td>
                                         <td className="px-10 py-5 text-sm font-bold text-right text-slate-500">
