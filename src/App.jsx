@@ -8,7 +8,6 @@ import { SiTesla } from 'react-icons/si';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-// مصفوفة البيانات الكاملة المحدثة
 const rawData = [
     { "date": "2020-01", "stockReturn": 0.532556, "indexReturn": -0.005902, "stockPrice": 43.37 },
     { "date": "2020-02", "stockReturn": -0.008461, "indexReturn": -0.086981, "stockPrice": 44.53 },
@@ -73,7 +72,6 @@ const rawData = [
 ];
 
 const App = () => {
-    // مرجع المجلد الرئيسي لتصويره
     const dashboardRef = useRef();
 
     const stats = useMemo(() => {
@@ -97,26 +95,46 @@ const App = () => {
         };
     }, []);
 
-const exportToPDF = async () => {
-    const element = dashboardRef.current;
-    if (!element) return;
-    try {
-        const canvas = await html2canvas(element, {
-            scale: 1.5, // تقليل الجودة قليلاً لسرعة المعالجة
-            useCORS: true,
-            backgroundColor: '#000000',
-            onclone: (clonedDoc) => {
-                // أهم خطوة: إزالة التعتيم (Blur) من النسخة المصورة لكي لا يعلق المتصفح
-                const glass = clonedDoc.querySelectorAll('.glass');
-                glass.forEach(el => el.style.backdropFilter = 'none');
-            }
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(imgData, 'PNG', 0, 0, 210, (canvas.height * 210) / canvas.width);
-        pdf.save("Tesla_Cyber_Report.pdf");
-    } catch (err) { console.error(err); }
-};
+    // دالة التصدير المطورة جداً لمنع الـ iframe من التعليق
+    const exportToPDF = async (e) => {
+        const btn = e.currentTarget;
+        const originalText = btn.innerText;
+        const element = dashboardRef.current;
+        
+        try {
+            btn.innerText = "GENERATING...";
+            btn.disabled = true;
+
+            const canvas = await html2canvas(element, {
+                scale: 1.5,
+                useCORS: true,
+                backgroundColor: '#000000',
+                logging: false, // لتقليل الضغط على المتصفح
+                onclone: (clonedDoc) => {
+                    // إزالة كل ما يعيق التصوير في الذاكرة
+                    const glassElements = clonedDoc.querySelectorAll('.glass');
+                    glassElements.forEach(el => {
+                        el.style.backdropFilter = 'none';
+                        el.style.background = 'rgba(15, 23, 42, 0.98)';
+                    });
+                }
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Tesla_Cyber_Analytics_Report.pdf`);
+        } catch (err) {
+            console.error("PDF Export failed:", err);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    };
+
     const scatterData = rawData.map(d => ({
         x: d.indexReturn * 100,
         y: d.stockReturn * 100,
@@ -142,10 +160,10 @@ const exportToPDF = async () => {
                     </div>
                     <button 
                         onClick={exportToPDF}
-                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all backdrop-blur-md group"
+                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all group"
                     >
                         <Download className="w-5 h-5 group-hover:animate-bounce" />
-                        EXPORT REPORT
+                        EXPORT PDF
                     </button>
                 </header>
 
@@ -156,7 +174,7 @@ const exportToPDF = async () => {
                         { label: 'Asset Volatility', value: stats.volatility + '%', color: 'text-red-500', icon: <Activity /> },
                         { label: 'Alpha (Edge)', value: stats.alpha + '%', color: 'text-slate-300', icon: <Star /> }
                     ].map((kpi, i) => (
-                        <div key={i} className="glass p-8 rounded-[2rem] hover:border-red-500/50 transition-all cursor-default group">
+                        <div key={i} className="glass p-8 rounded-[2rem] hover:border-red-500/50 transition-all cursor-default">
                             <div className={`p-3 w-fit rounded-xl bg-slate-900/80 mb-4 ${kpi.color}`}>
                                 {kpi.icon}
                             </div>
@@ -180,7 +198,6 @@ const exportToPDF = async () => {
                                     <Tooltip 
                                         contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}}
                                         itemStyle={{ color: '#fff' }}
-                                        labelStyle={{ color: '#94a3b8' }}
                                     />
                                     <Scatter name="Returns" data={scatterData} fill="#ef4444" fillOpacity={0.7} />
                                     <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
