@@ -80,13 +80,11 @@ const App = () => {
         const sumY = rawData.reduce((acc, val) => acc + val.stockReturn, 0);
         const sumXY = rawData.reduce((acc, val) => acc + (val.indexReturn * val.stockReturn), 0);
         const sumXX = rawData.reduce((acc, val) => acc + (val.indexReturn * val.indexReturn), 0);
-
         const beta = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
         const alpha = (sumY - beta * sumX) / n;
         const avgStockReturn = sumY / n;
         const stockVar = rawData.reduce((acc, val) => acc + Math.pow(val.stockReturn - avgStockReturn, 2), 0) / n;
         const stockVol = Math.sqrt(stockVar);
-
         return {
             beta: beta.toFixed(2),
             alpha: (alpha * 100).toFixed(2),
@@ -95,39 +93,38 @@ const App = () => {
         };
     }, []);
 
+    // دالة التصدير النهائية "القاطعة" للأخطاء
     const exportToPDF = async (e) => {
         const btn = e.currentTarget;
         const element = dashboardRef.current;
         if (!element) return;
-
         try {
-            btn.innerText = "PREPARING...";
+            btn.innerText = "CAPTURING...";
             btn.disabled = true;
 
-            // حل "نووي" لمشكلة الألوان oklab وأحجام Recharts
             const canvas = await html2canvas(element, {
                 scale: 1.5,
                 useCORS: true,
                 backgroundColor: '#000000',
                 onclone: (clonedDoc) => {
-                    // مسح كل ما يتعلق بـ oklab/oklch وتعديل الأحجام يدوياً في النسخة المصورة
                     const allNodes = clonedDoc.getElementsByTagName('*');
                     for (let node of allNodes) {
-                        const style = window.getComputedStyle(node);
-                        // استبدال ألوان Tailwind الحديثة بألوان كلاسيكية
-                        if (style.color.includes('okl')) node.style.setProperty('color', '#ffffff', 'important');
-                        if (style.backgroundColor.includes('okl')) node.style.setProperty('background-color', 'transparent', 'important');
-                        if (style.borderColor.includes('okl')) node.style.setProperty('border-color', '#475569', 'important');
-                        
-                        // إزالة تأثير الزجاج المعقد
-                        if (node.classList.contains('glass')) {
-                            node.style.backdropFilter = 'none';
-                            node.style.background = 'rgba(15, 23, 42, 0.98)';
-                        }
-                        // حل مشكلة عرض الرسوم البيانية
+                        // 1. القضاء على أي ذكر لألوان oklab البرمجية
+                        node.style.color = node.style.color.replace(/okl(ab|ch)\(.*\)/g, '#ffffff');
+                        node.style.backgroundColor = node.style.backgroundColor.replace(/okl(ab|ch)\(.*\)/g, 'transparent');
+                        node.style.borderColor = node.style.borderColor.replace(/okl(ab|ch)\(.*\)/g, '#475569');
+
+                        // 2. حل مشكلة حجم الرسوم البيانية يدوياً
                         if (node.classList.contains('recharts-responsive-container')) {
                             node.style.width = '600px';
                             node.style.height = '350px';
+                            node.style.visibility = 'visible';
+                        }
+
+                        // 3. إزالة تأثير الزجاج المسبب للثقل
+                        if (node.classList.contains('glass')) {
+                            node.style.backdropFilter = 'none';
+                            node.style.background = 'rgba(15, 23, 42, 0.98)';
                         }
                     }
                 }
@@ -135,32 +132,23 @@ const App = () => {
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Tesla_Report.pdf`);
+            pdf.addImage(imgData, 'PNG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+            pdf.save(`Tesla_Final_Report.pdf`);
         } catch (err) {
-            console.error("PDF Crash:", err);
-            alert("Export failed again. Trying a different method...");
+            console.error(err);
         } finally {
             btn.innerText = "EXPORT REPORT";
             btn.disabled = false;
-            // تنظيف الحاويات العالقة
+            // مسح كل الـ iframes العالقة فوراً
             document.querySelectorAll('.html2canvas-container').forEach(el => el.remove());
         }
     };
 
-    const scatterData = rawData.map(d => ({
-        x: d.indexReturn * 100,
-        y: d.stockReturn * 100,
-        date: d.date
-    }));
+    const scatterData = rawData.map(d => ({ x: d.indexReturn * 100, y: d.stockReturn * 100, date: d.date }));
 
     return (
         <div ref={dashboardRef} className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
              style={{ background: 'radial-gradient(circle at top center, #0f172a 0%, #000000 100%)' }}>
-            
             <div className="relative z-10 max-w-7xl mx-auto">
                 <header className="flex flex-col md:flex-row items-center justify-between glass p-8 rounded-[2.5rem] mb-10 shadow-2xl">
                     <div className="flex items-center gap-6">
@@ -174,16 +162,12 @@ const App = () => {
                             <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70 uppercase">Beta Matrix V2.0</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={exportToPDF}
-                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all group"
-                    >
+                    <button onClick={exportToPDF} className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all group">
                         <Download className="w-5 h-5 group-hover:animate-bounce" />
-                        EXPORT REPORT
+                        EXPORT PDF
                     </button>
                 </header>
 
-                {/* كروت الإحصائيات */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                     {[
                         { label: 'Beta (Sensitivity)', value: stats.beta, color: 'text-red-500', icon: <TrendingUp /> },
@@ -192,16 +176,13 @@ const App = () => {
                         { label: 'Alpha (Edge)', value: stats.alpha + '%', color: 'text-slate-300', icon: <Star /> }
                     ].map((kpi, i) => (
                         <div key={i} className="glass p-8 rounded-[2rem] hover:border-red-500/50 transition-all cursor-default">
-                            <div className={`p-3 w-fit rounded-xl bg-slate-900/80 mb-4 ${kpi.color}`}>
-                                {kpi.icon}
-                            </div>
+                            <div className={`p-3 w-fit rounded-xl bg-slate-900/80 mb-4 ${kpi.color}`}> {kpi.icon} </div>
                             <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">{kpi.label}</h3>
                             <p className="text-4xl font-black text-white tracking-tighter">{kpi.value}</p>
                         </div>
                     ))}
                 </div>
 
-                {/* الرسوم البيانية */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                     <div className="glass p-8 rounded-[2.5rem]">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest mb-10 flex items-center gap-3">
@@ -241,9 +222,8 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* الجدول التاريخي */}
                 <div className="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-10">
-                    <div className="px-10 py-6 bg-red-900/10 border-b border-slate-800 flex justify-between items-center">
+                    <div className="px-10 py-6 bg-red-900/10 border-b border-slate-800">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest">TSLA Historical Ledger</h3>
                     </div>
                     <div className="overflow-x-auto">
@@ -264,9 +244,7 @@ const App = () => {
                                         <td className={`px-10 py-5 text-sm font-black text-right ${row.stockReturn >= 0 ? 'text-emerald-400' : 'text-red-500'}`}>
                                             {(row.stockReturn * 100).toFixed(2)}%
                                         </td>
-                                        <td className="px-10 py-5 text-sm font-bold text-right text-slate-500">
-                                            {(row.indexReturn * 100).toFixed(2)}%
-                                        </td>
+                                        <td className="px-10 py-5 text-sm font-bold text-right text-slate-500"> {(row.indexReturn * 100).toFixed(2)}% </td>
                                     </tr>
                                 ))}
                             </tbody>
