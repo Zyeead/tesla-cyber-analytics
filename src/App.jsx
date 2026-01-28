@@ -8,6 +8,7 @@ import { SiTesla } from 'react-icons/si';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+// مصفوفة البيانات الكاملة المحدثة
 const rawData = [
     { "date": "2020-01", "stockReturn": 0.532556, "indexReturn": -0.005902, "stockPrice": 43.37 },
     { "date": "2020-02", "stockReturn": -0.008461, "indexReturn": -0.086981, "stockPrice": 44.53 },
@@ -72,7 +73,7 @@ const rawData = [
 ];
 
 const App = () => {
-    // مرجع للداشبورد لتصويره
+    // مرجع المجلد الرئيسي لتصويره
     const dashboardRef = useRef();
 
     const stats = useMemo(() => {
@@ -96,22 +97,43 @@ const App = () => {
         };
     }, []);
 
-    // دالة تصدير الـ PDF
-    const exportToPDF = async () => {
+    // دالة التصدير المطورة (حل مشكلة التعليق)
+    const exportToPDF = async (e) => {
+        const btn = e.currentTarget;
+        const originalText = btn.innerText;
         const element = dashboardRef.current;
-        const canvas = await html2canvas(element, {
-            scale: 2,
-            backgroundColor: '#000000',
-            useCORS: true
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Tesla_Cyber_Report_${new Date().toLocaleDateString()}.pdf`);
+        try {
+            btn.innerText = "GENERATING...";
+            btn.disabled = true;
+
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#000000',
+                onclone: (clonedDoc) => {
+                    // تعطيل الـ Blur في النسخة المنسوخة فقط لمنع التعليق
+                    const glassElements = clonedDoc.querySelectorAll('.glass');
+                    glassElements.forEach(el => {
+                        el.style.backdropFilter = 'none';
+                        el.style.background = 'rgba(15, 23, 42, 0.95)';
+                    });
+                }
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Tesla_Cyber_Analytics_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (err) {
+            console.error("Export Error:", err);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     };
 
     const scatterData = rawData.map(d => ({
@@ -119,13 +141,6 @@ const App = () => {
         y: d.stockReturn * 100,
         date: d.date
     }));
-
-    const minX = -15;
-    const maxX = 15;
-    const trendLineData = [
-        { x: minX, y: (parseFloat(stats.alpha) / 100 + parseFloat(stats.beta) * (minX / 100)) * 100 },
-        { x: maxX, y: (parseFloat(stats.alpha) / 100 + parseFloat(stats.beta) * (maxX / 100)) * 100 }
-    ];
 
     return (
         <div ref={dashboardRef} className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
@@ -144,14 +159,12 @@ const App = () => {
                             <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70">TSLA PERFORMANCE DASHBOARD</p>
                         </div>
                     </div>
-
-                    {/* زر التصدير الجديد */}
                     <button 
                         onClick={exportToPDF}
-                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-6 py-3 rounded-2xl font-bold transition-all backdrop-blur-md group"
+                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all backdrop-blur-md group"
                     >
-                        <Download className="w-5 h-5 group-hover:bounce" />
-                        EXPORT PDF REPORT
+                        <Download className="w-5 h-5 group-hover:animate-bounce" />
+                        EXPORT REPORT
                     </button>
                 </header>
 
@@ -187,12 +200,10 @@ const App = () => {
                                         contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}}
                                         itemStyle={{ color: '#fff' }}
                                         labelStyle={{ color: '#94a3b8' }}
-                                        cursor={{strokeDasharray: '3 3'}} 
                                     />
-                                    <Scatter name="Returns" data={scatterData} fill="#ef4444" fillOpacity={0.7} shape="circle" />
+                                    <Scatter name="Returns" data={scatterData} fill="#ef4444" fillOpacity={0.7} />
                                     <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
                                     <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
-                                    <Line type="monotone" data={trendLineData} dataKey="y" stroke="#ffffff" strokeWidth={2} dot={false} opacity={0.3} />
                                 </ScatterChart>
                             </ResponsiveContainer>
                         </div>
@@ -211,11 +222,9 @@ const App = () => {
                                     <Tooltip 
                                         contentStyle={{backgroundColor: '#0f172a', border: '1px solid #dc2626', borderRadius: '12px'}}
                                         itemStyle={{ color: '#fff' }}
-                                        labelStyle={{ color: '#fff' }}
                                     />
-                                    <Legend verticalAlign="top" align="right" wrapperStyle={{paddingBottom: '20px', fontSize: '10px', color: '#94a3b8'}} />
                                     <Bar name="TSLA Return" dataKey="stockReturn" fill="#dc2626" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
-                                    <Line name="S&P 500" type="monotone" dataKey="indexReturn" stroke="#94a3b8" strokeWidth={3} dot={{r: 4, fill: '#475569', stroke: '#94a3b8'}} />
+                                    <Line name="S&P 500" type="monotone" dataKey="indexReturn" stroke="#94a3b8" strokeWidth={3} dot={{r: 4}} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
