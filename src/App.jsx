@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { 
     ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, 
     ResponsiveContainer, ReferenceLine, Line, ComposedChart, Bar, Legend 
 } from 'recharts';
-import { TrendingUp, ArrowUpRight, Activity, Star } from 'lucide-react';
+import { TrendingUp, ArrowUpRight, Activity, Star, Download } from 'lucide-react';
 import { SiTesla } from 'react-icons/si';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
-// مصفوفة البيانات الكاملة (60 شهرًا) لضمان بيتا دقيقة 2.38
 const rawData = [
     { "date": "2020-01", "stockReturn": 0.532556, "indexReturn": -0.005902, "stockPrice": 43.37 },
     { "date": "2020-02", "stockReturn": -0.008461, "indexReturn": -0.086981, "stockPrice": 44.53 },
@@ -71,7 +72,9 @@ const rawData = [
 ];
 
 const App = () => {
-    // حساب الإحصائيات بناءً على البيانات
+    // مرجع للداشبورد لتصويره
+    const dashboardRef = useRef();
+
     const stats = useMemo(() => {
         const n = rawData.length;
         const sumX = rawData.reduce((acc, val) => acc + val.indexReturn, 0);
@@ -93,6 +96,24 @@ const App = () => {
         };
     }, []);
 
+    // دالة تصدير الـ PDF
+    const exportToPDF = async () => {
+        const element = dashboardRef.current;
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            backgroundColor: '#000000',
+            useCORS: true
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Tesla_Cyber_Report_${new Date().toLocaleDateString()}.pdf`);
+    };
+
     const scatterData = rawData.map(d => ({
         x: d.indexReturn * 100,
         y: d.stockReturn * 100,
@@ -107,12 +128,10 @@ const App = () => {
     ];
 
     return (
-        /* التعديل هنا: إضافة الـ Style المباشر لضمان السواد الفخم وظهور الزجاج */
-        <div className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
+        <div ref={dashboardRef} className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
              style={{ background: 'radial-gradient(circle at top center, #0f172a 0%, #000000 100%)' }}>
             
             <div className="relative z-10 max-w-7xl mx-auto">
-                {/* الهيدر الزجاجي */}
                 <header className="flex flex-col md:flex-row items-center justify-between glass p-8 rounded-[2.5rem] mb-10 shadow-2xl">
                     <div className="flex items-center gap-6">
                         <div className="bg-red-500/20 p-4 rounded-2xl border border-red-500/30">
@@ -125,9 +144,17 @@ const App = () => {
                             <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70">TSLA PERFORMANCE DASHBOARD</p>
                         </div>
                     </div>
+
+                    {/* زر التصدير الجديد */}
+                    <button 
+                        onClick={exportToPDF}
+                        className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-6 py-3 rounded-2xl font-bold transition-all backdrop-blur-md group"
+                    >
+                        <Download className="w-5 h-5 group-hover:bounce" />
+                        EXPORT PDF REPORT
+                    </button>
                 </header>
 
-                {/* كروت الإحصائيات الزجاجية */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                     {[
                         { label: 'Beta (Sensitivity)', value: stats.beta, color: 'text-red-500', icon: <TrendingUp /> },
@@ -145,7 +172,6 @@ const App = () => {
                     ))}
                 </div>
 
-                {/* الرسوم البيانية داخل صناديق زجاجية */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                     <div className="glass p-8 rounded-[2.5rem]">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest mb-10 flex items-center gap-3">
@@ -196,7 +222,6 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* الجدول التاريخي الزجاجي */}
                 <div className="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-10">
                     <div className="px-10 py-6 bg-red-900/10 border-b border-slate-800 flex justify-between items-center">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest">Historical Data Ledger</h3>
