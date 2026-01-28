@@ -97,45 +97,26 @@ const App = () => {
         };
     }, []);
 
-    // دالة التصدير المطورة (حل مشكلة التعليق)
-    const exportToPDF = async (e) => {
-        const btn = e.currentTarget;
-        const originalText = btn.innerText;
-        const element = dashboardRef.current;
-        
-        try {
-            btn.innerText = "GENERATING...";
-            btn.disabled = true;
-
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#000000',
-                onclone: (clonedDoc) => {
-                    // تعطيل الـ Blur في النسخة المنسوخة فقط لمنع التعليق
-                    const glassElements = clonedDoc.querySelectorAll('.glass');
-                    glassElements.forEach(el => {
-                        el.style.backdropFilter = 'none';
-                        el.style.background = 'rgba(15, 23, 42, 0.95)';
-                    });
-                }
-            });
-
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Tesla_Cyber_Analytics_${new Date().toISOString().split('T')[0]}.pdf`);
-        } catch (err) {
-            console.error("Export Error:", err);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
-    };
-
+const exportToPDF = async () => {
+    const element = dashboardRef.current;
+    if (!element) return;
+    try {
+        const canvas = await html2canvas(element, {
+            scale: 1.5, // تقليل الجودة قليلاً لسرعة المعالجة
+            useCORS: true,
+            backgroundColor: '#000000',
+            onclone: (clonedDoc) => {
+                // أهم خطوة: إزالة التعتيم (Blur) من النسخة المصورة لكي لا يعلق المتصفح
+                const glass = clonedDoc.querySelectorAll('.glass');
+                glass.forEach(el => el.style.backdropFilter = 'none');
+            }
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        pdf.addImage(imgData, 'PNG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+        pdf.save("Tesla_Cyber_Report.pdf");
+    } catch (err) { console.error(err); }
+};
     const scatterData = rawData.map(d => ({
         x: d.indexReturn * 100,
         y: d.stockReturn * 100,
