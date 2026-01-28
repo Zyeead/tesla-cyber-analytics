@@ -96,44 +96,55 @@ const App = () => {
     }, []);
 
     // دالة التصدير المطورة جداً لمنع الـ iframe من التعليق
-    const exportToPDF = async (e) => {
-        const btn = e.currentTarget;
-        const originalText = btn.innerText;
-        const element = dashboardRef.current;
-        
-        try {
-            btn.innerText = "GENERATING...";
-            btn.disabled = true;
+const exportToPDF = async (e) => {
+    const btn = e.currentTarget;
+    const element = dashboardRef.current;
+    if (!element) return;
 
-            const canvas = await html2canvas(element, {
-                scale: 1.5,
-                useCORS: true,
-                backgroundColor: '#000000',
-                logging: false, // لتقليل الضغط على المتصفح
-                onclone: (clonedDoc) => {
-                    // إزالة كل ما يعيق التصوير في الذاكرة
-                    const glassElements = clonedDoc.querySelectorAll('.glass');
-                    glassElements.forEach(el => {
+    try {
+        btn.innerText = "PROCESSING...";
+        btn.disabled = true;
+
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#000000',
+            // حل مشكلة الألوان (oklab)
+            onclone: (clonedDoc) => {
+                const allElements = clonedDoc.getElementsByTagName("*");
+                for (let el of allElements) {
+                    // تحويل أي لون غريب إلى أسود أو شفاف يدوياً لمنع الانهيار
+                    const style = window.getComputedStyle(el);
+                    if (style.color.includes('oklab')) el.style.color = '#ffffff';
+                    if (style.backgroundColor.includes('oklab')) el.style.backgroundColor = 'transparent';
+                    
+                    // حل مشكلة حجم الرسوم البيانية
+                    if (el.classList.contains('glass')) {
                         el.style.backdropFilter = 'none';
-                        el.style.background = 'rgba(15, 23, 42, 0.98)';
-                    });
+                        el.style.filter = 'none';
+                    }
                 }
-            });
+            }
+        });
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Tesla_Cyber_Analytics_Report.pdf`);
-        } catch (err) {
-            console.error("PDF Export failed:", err);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
-    };
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Tesla_Cyber_Report.pdf`);
+    } catch (err) {
+        console.error("PDF Final Error:", err);
+        alert("تنبيه: المتصفح يواجه صعوبة في معالجة الألوان الحديثة، جرب متصفحاً آخر أو حدث الصفحة.");
+    } finally {
+        btn.innerText = "EXPORT REPORT";
+        btn.disabled = false;
+        // تنظيف المخلفات البرمجية
+        const containers = document.querySelectorAll('.html2canvas-container');
+        containers.forEach(c => c.remove());
+    }
+};
 
     const scatterData = rawData.map(d => ({
         x: d.indexReturn * 100,
