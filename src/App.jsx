@@ -8,7 +8,6 @@ import { SiTesla } from 'react-icons/si';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-// مصفوفة البيانات الكاملة (60 شهراً) لضمان دقة تحليل البيتا
 const rawData = [
     { "date": "2020-01", "stockReturn": 0.532556, "indexReturn": -0.005902, "stockPrice": 43.37 },
     { "date": "2020-02", "stockReturn": -0.008461, "indexReturn": -0.086981, "stockPrice": 44.53 },
@@ -75,7 +74,6 @@ const rawData = [
 const App = () => {
     const dashboardRef = useRef();
 
-    // حساب الإحصائيات (البيتا والعودة)
     const stats = useMemo(() => {
         const n = rawData.length;
         const sumX = rawData.reduce((acc, val) => acc + val.indexReturn, 0);
@@ -97,7 +95,6 @@ const App = () => {
         };
     }, []);
 
-    // دالة التصدير النهائية - مُحصنة ضد أخطاء oklab و Blur
     const exportToPDF = async (e) => {
         const btn = e.currentTarget;
         const element = dashboardRef.current;
@@ -107,23 +104,30 @@ const App = () => {
             btn.innerText = "PREPARING...";
             btn.disabled = true;
 
+            // حل "نووي" لمشكلة الألوان oklab وأحجام Recharts
             const canvas = await html2canvas(element, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 backgroundColor: '#000000',
                 onclone: (clonedDoc) => {
-                    // 1. تنظيف ألوان oklab التي لا يفهمها البرنامج
+                    // مسح كل ما يتعلق بـ oklab/oklch وتعديل الأحجام يدوياً في النسخة المصورة
                     const allNodes = clonedDoc.getElementsByTagName('*');
                     for (let node of allNodes) {
                         const style = window.getComputedStyle(node);
-                        if (style.color.includes('oklab')) node.style.color = '#ffffff';
-                        if (style.backgroundColor.includes('oklab')) node.style.backgroundColor = 'rgba(0,0,0,0)';
+                        // استبدال ألوان Tailwind الحديثة بألوان كلاسيكية
+                        if (style.color.includes('okl')) node.style.setProperty('color', '#ffffff', 'important');
+                        if (style.backgroundColor.includes('okl')) node.style.setProperty('background-color', 'transparent', 'important');
+                        if (style.borderColor.includes('okl')) node.style.setProperty('border-color', '#475569', 'important');
                         
-                        // 2. إزالة تأثير الزجاج Blur لتسريع العملية ومنع التعليق
+                        // إزالة تأثير الزجاج المعقد
                         if (node.classList.contains('glass')) {
                             node.style.backdropFilter = 'none';
-                            node.style.webkitBackdropFilter = 'none';
-                            node.style.background = 'rgba(15, 23, 42, 0.95)';
+                            node.style.background = 'rgba(15, 23, 42, 0.98)';
+                        }
+                        // حل مشكلة عرض الرسوم البيانية
+                        if (node.classList.contains('recharts-responsive-container')) {
+                            node.style.width = '600px';
+                            node.style.height = '350px';
                         }
                     }
                 }
@@ -135,14 +139,14 @@ const App = () => {
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Tesla_Cyber_Report_${new Date().toLocaleDateString()}.pdf`);
+            pdf.save(`Tesla_Report.pdf`);
         } catch (err) {
-            console.error("PDF Export Crash:", err);
-            alert("Export failed due to browser color limitations. Please try Chrome or Edge.");
+            console.error("PDF Crash:", err);
+            alert("Export failed again. Trying a different method...");
         } finally {
             btn.innerText = "EXPORT REPORT";
             btn.disabled = false;
-            // تنظيف الحاويات العالقة لضمان عدم تراكم الـ iframes
+            // تنظيف الحاويات العالقة
             document.querySelectorAll('.html2canvas-container').forEach(el => el.remove());
         }
     };
@@ -154,7 +158,6 @@ const App = () => {
     }));
 
     return (
-        /* الخلفية السوداء السيبرانية المباشرة */
         <div ref={dashboardRef} className="relative min-h-screen p-4 md:p-10 overflow-hidden" 
              style={{ background: 'radial-gradient(circle at top center, #0f172a 0%, #000000 100%)' }}>
             
@@ -168,7 +171,7 @@ const App = () => {
                             <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">
                                 Tesla <span className="text-red-500">Cyber</span> Analytics
                             </h1>
-                            <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70 uppercase">Beta Matrix v2.0</p>
+                            <p className="text-slate-400 font-medium text-sm tracking-widest opacity-70 uppercase">Beta Matrix V2.0</p>
                         </div>
                     </div>
                     <button 
@@ -176,10 +179,11 @@ const App = () => {
                         className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all group"
                     >
                         <Download className="w-5 h-5 group-hover:animate-bounce" />
-                        EXPORT PDF
+                        EXPORT REPORT
                     </button>
                 </header>
 
+                {/* كروت الإحصائيات */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                     {[
                         { label: 'Beta (Sensitivity)', value: stats.beta, color: 'text-red-500', icon: <TrendingUp /> },
@@ -197,6 +201,7 @@ const App = () => {
                     ))}
                 </div>
 
+                {/* الرسوم البيانية */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                     <div className="glass p-8 rounded-[2.5rem]">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest mb-10 flex items-center gap-3">
@@ -236,6 +241,7 @@ const App = () => {
                     </div>
                 </div>
 
+                {/* الجدول التاريخي */}
                 <div className="glass rounded-[2.5rem] overflow-hidden shadow-2xl mb-10">
                     <div className="px-10 py-6 bg-red-900/10 border-b border-slate-800 flex justify-between items-center">
                         <h3 className="text-lg font-black text-white uppercase tracking-widest">TSLA Historical Ledger</h3>
