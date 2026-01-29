@@ -93,13 +93,14 @@ const App = () => {
         };
     }, []);
 
-    // دالة التصدير النهائية "القاطعة" للأخطاء
+    // دالة التصدير النهائية القوية جداً
     const exportToPDF = async (e) => {
         const btn = e.currentTarget;
         const element = dashboardRef.current;
         if (!element) return;
+
         try {
-            btn.innerText = "CAPTURING...";
+            btn.innerText = "PREPARING REPORT...";
             btn.disabled = true;
 
             const canvas = await html2canvas(element, {
@@ -109,19 +110,18 @@ const App = () => {
                 onclone: (clonedDoc) => {
                     const allNodes = clonedDoc.getElementsByTagName('*');
                     for (let node of allNodes) {
-                        // 1. القضاء على أي ذكر لألوان oklab البرمجية
-                        node.style.color = node.style.color.replace(/okl(ab|ch)\(.*\)/g, '#ffffff');
-                        node.style.backgroundColor = node.style.backgroundColor.replace(/okl(ab|ch)\(.*\)/g, 'transparent');
-                        node.style.borderColor = node.style.borderColor.replace(/okl(ab|ch)\(.*\)/g, '#475569');
-
-                        // 2. حل مشكلة حجم الرسوم البيانية يدوياً
+                        const style = window.getComputedStyle(node);
+                        // 1. استبدال ألوان oklab البرمجية يدوياً
+                        if (style.color.includes('okl')) node.style.color = '#ffffff';
+                        if (style.backgroundColor.includes('okl')) node.style.backgroundColor = 'transparent';
+                        
+                        // 2. حل مشكلة حجم الرسوم البيانية
                         if (node.classList.contains('recharts-responsive-container')) {
                             node.style.width = '600px';
                             node.style.height = '350px';
-                            node.style.visibility = 'visible';
                         }
-
-                        // 3. إزالة تأثير الزجاج المسبب للثقل
+                        
+                        // 3. إزالة تأثير الزجاج Blur
                         if (node.classList.contains('glass')) {
                             node.style.backdropFilter = 'none';
                             node.style.background = 'rgba(15, 23, 42, 0.98)';
@@ -132,14 +132,18 @@ const App = () => {
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            pdf.addImage(imgData, 'PNG', 0, 0, 210, (canvas.height * 210) / canvas.width);
-            pdf.save(`Tesla_Final_Report.pdf`);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Tesla_Cyber_Analytics.pdf`);
         } catch (err) {
-            console.error(err);
+            console.error("PDF Export failed:", err);
+            alert("Export failed due to browser color limitations.");
         } finally {
             btn.innerText = "EXPORT REPORT";
             btn.disabled = false;
-            // مسح كل الـ iframes العالقة فوراً
+            // تنظيف الحاويات العالقة
             document.querySelectorAll('.html2canvas-container').forEach(el => el.remove());
         }
     };
@@ -164,7 +168,7 @@ const App = () => {
                     </div>
                     <button onClick={exportToPDF} className="mt-6 md:mt-0 flex items-center gap-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/50 text-red-500 px-8 py-4 rounded-2xl font-black transition-all group">
                         <Download className="w-5 h-5 group-hover:animate-bounce" />
-                        EXPORT PDF
+                        EXPORT REPORT
                     </button>
                 </header>
 
